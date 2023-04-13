@@ -1,0 +1,179 @@
+
+class Program
+{
+static void Main(string[] args)
+{
+bool repeat = true;
+while (repeat)
+{
+Console.WriteLine("Выберите способ ввода данных:");
+Console.WriteLine("1. Ввести данные вручную");
+Console.WriteLine("2. Загрузить данные из файла");
+Console.Write("Введите номер способа: ");
+string choice = Console.ReadLine();
+if (choice == "1")
+{
+Console.WriteLine("Введите значения предложения (supply), разделенные пробелами:");
+string supplyInput = Console.ReadLine();
+int[] supply = Array.ConvertAll(supplyInput.Split(' '), int.Parse);
+
+Console.WriteLine("Введите значения спроса (demand), разделенные пробелами:");
+string demandInput = Console.ReadLine();
+int[] demand = Array.ConvertAll(demandInput.Split(' '), int.Parse);
+
+Console.WriteLine("Введите матрицу стоимостей (costs):");
+int[,] costs = new int[supply.Length, demand.Length];
+for (int i = 0; i < supply.Length; i++)
+{
+Console.WriteLine($"Введите стоимости для поставщика {i + 1}, разделенные пробелами:");
+string costsInput = Console.ReadLine();
+int[] costsRow = Array.ConvertAll(costsInput.Split(' '), int.Parse);
+for (int j = 0; j < demand.Length; j++)
+{
+costs[i, j] = costsRow[j];
+}
+}
+
+int totalCost;
+int[,] solution = SolveTransportationProblem(supply, demand, costs, out totalCost);
+
+Console.WriteLine("Результат решения транспортной задачи:");
+PrintMatrix(solution, totalCost);
+
+Console.WriteLine("Сохранение результата в файл...");
+SaveResultToFile(solution, totalCost);
+}
+else if (choice == "2")
+{
+Console.Write("Введите путь к файлу с входными данными: ");
+string filePath = Console.ReadLine();
+
+if (!File.Exists(filePath))
+{
+Console.WriteLine("Файл не найден.");
+return;
+}
+
+try
+{
+string[] lines = File.ReadAllLines(filePath);
+
+int[] supply = Array.ConvertAll(lines[0].Split(' '), int.Parse);
+int[] demand = Array.ConvertAll(lines[1].Split(' '), int.Parse);
+int[,] costs = new int[supply.Length, demand.Length];
+
+for (int i = 0; i < supply.Length; i++)
+{
+int[] costsRow = Array.ConvertAll(lines[i + 2].Split(' '), int.Parse);
+for (int j = 0; j < demand.Length; j++)
+{
+costs[i, j] = costsRow[j];
+}
+}
+
+int totalCost;
+int[,] solution = SolveTransportationProblem(supply, demand, costs, out totalCost);
+
+Console.WriteLine("Результат решения транспортной задачи:");
+PrintMatrix(solution, totalCost);
+
+Console.WriteLine("Сохранение результата в файл...");
+SaveResultToFile(solution, totalCost);
+}
+catch (Exception ex)
+{
+Console.WriteLine($"Ошибка при чтении файла: {ex.Message}");
+}
+}
+else
+{
+Console.WriteLine("Неверный номер способа, повторите ввод.");
+}
+Console.WriteLine("Хотите продолжить? (да/нет)");
+string repeatInput = Console.ReadLine();
+repeat = repeatInput.ToLower() == "да";
+}
+}
+
+static int[,] SolveTransportationProblem(int[] supply, int[] demand, int[,] costs, out int totalCost)
+{
+// Инициализация результирующей матрицы
+int[,] solution = new int[supply.Length, demand.Length];
+
+// Пока есть неудовлетворенный спрос или предложение
+while (supply.Sum() > 0 || demand.Sum() > 0)
+{
+// Находим минимальный элемент в текущей строке
+int minCost = int.MaxValue;
+int minRow = -1;
+int minCol = -1;
+
+for (int i = 0; i < supply.Length; i++)
+{
+for (int j = 0; j < demand.Length; j++)
+{
+if (costs[i, j] < minCost && supply[i] > 0 && demand[j] > 0)
+{
+minCost = costs[i, j];
+minRow = i;
+minCol = j;
+}
+}
+}
+
+// Выполняем перевозку
+int quantity = Math.Min(supply[minRow], demand[minCol]);
+solution[minRow, minCol] = quantity;
+supply[minRow] -= quantity;
+demand[minCol] -= quantity;
+}
+
+// Вычисляем общую стоимость
+totalCost = 0;
+for (int i = 0; i < supply.Length; i++)
+{
+for (int j = 0; j < demand.Length; j++)
+{
+totalCost += solution[i, j] * costs[i, j];
+}
+}
+
+return solution;
+}
+
+static void PrintMatrix(int[,] matrix, int totalCost)
+{
+Console.WriteLine("Матрица перевозок:");
+for (int i = 0; i < matrix.GetLength(0); i++)
+{
+for (int j = 0; j < matrix.GetLength(1); j++)
+{
+Console.Write($"{matrix[i, j]}\t");
+}
+Console.WriteLine();
+}
+
+Console.WriteLine($"Общая стоимость: {totalCost}");
+}
+
+static void SaveResultToFile(int[,] solution, int totalCost)
+{
+// Сохраняем результат в файл
+using (StreamWriter writer = new StreamWriter("result.txt"))
+{
+writer.WriteLine("Матрица перевозок:");
+for (int i = 0; i < solution.GetLength(0); i++)
+{
+for (int j = 0; j < solution.GetLength(1); j++)
+{
+writer.Write($"{solution[i, j]}\t");
+}
+writer.WriteLine();
+}
+
+writer.WriteLine($"Общая стоимость: {totalCost}");
+}
+
+Console.WriteLine("Результат сохранен в файле result.txt");
+}
+}
